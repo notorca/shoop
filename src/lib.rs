@@ -302,6 +302,9 @@ impl Server {
         if s.starts_with("~/") {
             Path::new(&env::var("HOME").unwrap()).join(&s[2..])
                 .to_str().unwrap().into()
+        } else if !s.starts_with("/") {
+            Path::new(&env::var("HOME").unwrap()).join(&s)
+                .to_str().unwrap().into()
         } else {
             s.into()
         }
