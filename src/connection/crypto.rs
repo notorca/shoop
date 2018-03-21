@@ -189,7 +189,6 @@ mod test {
     #[test]
     fn roundtrip() {
         use ::rand::{self, Rng};
-        use ::rand::distributions::{Distribution, Uniform};
         // generate some data, seal it, and then make sure it unseals to the same thing
         let mut rng = rand::thread_rng();
 

@@ -16,6 +16,9 @@ struct Opt {
     #[structopt(short = "f", long = "force", help = "Force overwrite of file")]
     force: bool,
 
+    #[structopt(short = "i", long = "ignore", help = "Ignore host passed from server for UTP")]
+    ignore: bool,
+
     #[structopt(short = "s", long = "server", help = "Server mode")]
     server: bool,
 
@@ -60,7 +63,7 @@ fn main() {
             let dest = Target::from(opt.dest.clone());
 
             match Client::new(source, dest, port_range) {
-                Ok(mut client) => client.start(opt.force),
+                Ok(mut client) => client.start(opt.force, opt.ignore),
                 Err(e) => error!("{}", e),
             }
         }

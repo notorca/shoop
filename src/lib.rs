@@ -27,7 +27,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use colored::*;
 use connection::{PortRange, Transceiver};
 use log::{Record, Level, Metadata};
-use std::net::{SocketAddr, IpAddr};
+use std::net::{SocketAddr, IpAddr, ToSocketAddrs};
 use std::fs::File;
 use std::io;
 use std::io::{Cursor, SeekFrom, Write};
@@ -548,23 +548,34 @@ impl Client {
         })
     }
 
-    pub fn start(&mut self, force_dl: bool) {
+    pub fn start(&mut self, force_dl: bool, ignore_server_host: bool) {
+        let utp_host;
         let ssh = match self.transfer_state.clone() {
             TransferState::Send(..) => {
                 panic!("sending unsupported");
             }
             TransferState::Receive((host, path), _) => {
+                utp_host = host.clone();
                 ssh::Connection::new(host, path, &self.port_range)
             }
         };
 
-        overprint!(" - establishing SSH session...");
+        overprint!(" - establishing SSH session to {}...", utp_host);
 
         let response = ssh.connect().unwrap_or_else(|e| {
             die!("ssh error: {}", e.msg);
         });
 
-        debug!("init(version: {}, addr: {})",
+        let mut utp_addr = response.addr;
+        if ignore_server_host {
+            let addr = format!("{}:{}", utp_host, response.addr.port()).to_socket_addrs()
+                .expect("Unable to resolve domain")
+                .next()
+                .expect("Unable to resolve domain");
+            utp_addr.set_ip(addr.ip());
+        }
+
+        debug!("👈  init(version: {}, addr: {})",
                response.version, response.addr);
 
         let start_ts = Instant::now();
@@ -576,7 +587,7 @@ impl Client {
             TransferState::Receive(_, dest_path) => {
                 self.receive(&dest_path,
                              force_dl,
-                             response.addr,
+                             utp_addr,
                              &response.key,
                              &pb);
             }
