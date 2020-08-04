@@ -444,13 +444,13 @@ impl Server {
     fn send_file<T: Transceiver>(&mut self, client: &mut T) -> Result<(), Error> {
         let mut buf = vec![0u8; connection::MAX_MESSAGE_SIZE];
 
-        let offset = try!(self.recv_offset(client));
+        let offset = self.recv_offset(client)?;
         info!("starting at offset {}", offset);
 
         let remaining = Server::get_file_size(&self.filename) - offset;
         info!("{} bytes remaining", remaining);
 
-        try!(self.send_remaining(client, remaining));
+        self.send_remaining(client, remaining)?;
         info!("sent remaining packet. sending file...");
 
         let reader = file::Reader::new(&self.filename, offset);

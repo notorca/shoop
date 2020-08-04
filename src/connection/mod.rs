@@ -32,7 +32,7 @@ impl ExactIO for UdtSocket {
     fn send_exact(&self, buf: &[u8]) -> Result<(), UdtError> {
         let mut total: usize = 0;
         while total < buf.len() {
-            total += try!(self.send(&buf[total..])) as usize;
+            total += self.send(&buf[total..])? as usize;
         }
         Ok(())
     }
@@ -41,7 +41,7 @@ impl ExactIO for UdtSocket {
         let mut total: usize = 0;
         while total < len {
             let remaining = len - total;
-            total += try!(self.recv(&mut buf[total..], remaining)) as usize;
+            total += self.recv(&mut buf[total..], remaining)? as usize;
         }
         Ok(())
     }
@@ -66,11 +66,11 @@ fn send(sock: &UdtSocket, crypto: &mut crypto::Handler, buf: &mut [u8], len: usi
 
 fn recv(sock: &UdtSocket, crypto: &mut crypto::Handler, buf: &mut [u8]) -> Result<usize, UdtError> {
     let mut len_buf = vec![0u8; 4];
-    try!(sock.recv_exact(&mut len_buf, 4)); // u32
+    sock.recv_exact(&mut len_buf, 4)?; // u32
     let mut rdr = Cursor::new(len_buf);
     let len = rdr.read_u32::<LittleEndian>().unwrap() as usize;
 
-    try!(sock.recv_exact(buf, len));
+    sock.recv_exact(buf, len)?;
     crypto.open(&mut buf[..len]).map_err(|_| {
         UdtError {
             err_code: -1,

@@ -88,7 +88,7 @@ impl Connection {
     }
 
     fn exec(&self, extra_args: &Vec<String>) -> Result<Output, Error> {
-        try!(Self::verify_command_exists("ssh"));
+        Self::verify_command_exists("ssh")?;
 
         let cmd = format!("shoop -s '{}' -p {}",
                           self.path.to_string_lossy(),
@@ -98,9 +98,9 @@ impl Connection {
         for arg in extra_args {
             command.arg(&arg);
         }
-        let output = try!(command.arg(&self.hostname)
+        let output = command.arg(&self.hostname)
                .arg(cmd)
-               .output());
+               .output()?;
 
         if !output.status.success() {
             Err(Error::new(ErrorType::SshError, "ssh returned failure exit code"))
@@ -117,24 +117,24 @@ impl Connection {
                 println!("\n");
                 error!("strong SSH crypto appears to be unavailable.");
                 error!("this session is sketch, and shoop may simply refuse to work in the future.\n");
-                try!(self.exec(&Vec::new()))
+                self.exec(&Vec::new())?
             }
         };
 
-        let raw_response = try!(String::from_utf8(output.stdout).map_err(|e| {
+        let raw_response = String::from_utf8(output.stdout).map_err(|e| {
             Error::new(ErrorType::BadServerResponse,
                        format!("couldn't decode server response: {}", e))
-        }));
+        })?;
 
         let response = raw_response.trim();
 
         if response.starts_with("shooperr ") {
             let errblock = &response["shooperr ".len()..];
             let (code, msg) = errblock.split_at(errblock.find(' ').unwrap());
-            let code_int = try!(code.parse::<usize>().map_err(|_| {
+            let code_int = code.parse::<usize>().map_err(|_| {
                 Error::new(ErrorType::BadServerResponse,
                            format!("server gave bad error code: {}", code))
-            }));
+            })?;
 
             return Err(Error::new(ErrorType::Server(code_int), msg));
         }
@@ -154,10 +154,10 @@ impl Connection {
                                   "unexpected response start from server"));
         }
 
-        let version_code = try!(version.parse::<usize>().map_err(|_| {
+        let version_code = version.parse::<usize>().map_err(|_| {
             Error::new(ErrorType::BadServerResponse,
                        "unparseable version")
-        }));
+        })?;
 
         if version_code != 0 {
             return Err(Error::new(ErrorType::BadServerResponse,
@@ -165,11 +165,11 @@ impl Connection {
         }
 
         let keybytes = Vec::<u8>::from_hex(keyhex).unwrap();
-        let addr: SocketAddr = try!(SocketAddr::from_str(&format!("{}:{}", ip, port)[..])
+        let addr: SocketAddr = SocketAddr::from_str(&format!("{}:{}", ip, port)[..])
             .map_err(|_| {
                 Error::new(ErrorType::BadServerResponse,
                            "ip/port server sent aren't nice looking")
-            }));
+            })?;
 
         Ok(Response {
             version: version_code,
